@@ -91,23 +91,56 @@ public class Main {
         byte[] serilizeBytes = Serialiser.getBytes(legacyTransferTransaction,serialiseOptions);
         byte[] result = Sha256Hash.hash(serilizeBytes);
 
-        BigInteger[] components = signer.generateSignature(result);
+        byte[] sig = sign(result,privateKeyBytes);
+        String signure = Hex.toHexString(sig);
 
-        ECKey.ECDSASignature ecdsaSig = new ECKey.ECDSASignature(components[0], components[1]).toCanonicalised();
+        transactionData.setSignature(signure);
 
-        ByteArrayOutputStream baos = new ByteArrayOutputStream(72);
-        try {
-            DERSequenceGenerator der = new DERSequenceGenerator(baos);
-            der.addObject(new ASN1Integer(ecdsaSig.r));
-            der.addObject(new ASN1Integer(ecdsaSig.s));
-            der.close();
-            byte[] sig = baos.toByteArray();
+        System.out.println(signure);
 
-            String signuture = Hex.toHexString(sig);
-            System.out.println(signuture);
-        } catch (IOException e) {
-            // TODO: log
+    }
+
+
+    public static byte[] sign(byte[] msg, byte[] secKey) throws Exception    {
+        if(msg.length != 32)    {
+            throw new Exception("The message must be a 32-byte array.");
         }
+        BigInteger secKey0 = Util.bigIntFromBytes(secKey);
 
+        if(!(BigInteger.ONE.compareTo(secKey0) <= 0 && secKey0.compareTo(Point.getn().subtract(BigInteger.ONE)) <= 0)) {
+            throw new Exception("The secret key must be an integer in the range 1..n-1.");
+        }
+        Point P = Point.mul(Point.getG(), secKey0);
+        if(!P.hasSquareY())    {
+            secKey0 = Point.getn().subtract(secKey0);
+        }
+        int len = Util.bytesFromBigInteger(secKey0).length + msg.length;
+        byte[] buf = new byte[len];
+        System.arraycopy(Util.bytesFromBigInteger(secKey0), 0, buf, 0, Util.bytesFromBigInteger(secKey0).length);
+        System.arraycopy(msg, 0, buf, Util.bytesFromBigInteger(secKey0).length, msg.length);
+        BigInteger k0 = Util.bigIntFromBytes(Point.taggedHash("BIPSchnorrDerive", buf)).mod(Point.getn());
+        if(k0.compareTo(BigInteger.ZERO) == 0)    {
+            throw new Exception("Failure. This happens only with negligible probability.");
+        }
+        Point R = Point.mul(Point.getG(), k0);
+        BigInteger k = null;
+        if(!R.hasSquareY())    {
+            k = Point.getn().subtract(k0);
+        }
+        else    {
+            k = k0;
+        }
+        len = R.toBytes().length + P.toBytes().length + msg.length;
+        buf = new byte[len];
+        System.arraycopy(R.toBytes(), 0, buf, 0, R.toBytes().length);
+        System.arraycopy(P.toBytes(), 0, buf, R.toBytes().length, P.toBytes().length);
+        System.arraycopy(msg, 0, buf, R.toBytes().length + P.toBytes().length, msg.length);
+        BigInteger e = Util.bigIntFromBytes(Point.taggedHash("BIPSchnorr", buf)).mod(Point.getn());
+        BigInteger kes = k.add(e.multiply(secKey0)).mod(Point.getn());
+        len = R.toBytes().length + Util.bytesFromBigInteger(kes).length;
+        byte[] ret = new byte[len];
+        System.arraycopy(R.toBytes(), 0, ret, 0, R.toBytes().length);
+        System.arraycopy(Util.bytesFromBigInteger(kes), 0, ret, R.toBytes().length, Util.bytesFromBigInteger(kes).length);
+        return ret;
     }
 }
