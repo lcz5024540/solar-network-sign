@@ -91,8 +91,23 @@ public class Main {
         byte[] serilizeBytes = Serialiser.getBytes(legacyTransferTransaction,serialiseOptions);
         byte[] result = Sha256Hash.hash(serilizeBytes);
 
-        PKCS8EncodedKeySpec keySpec = new PKCS8EncodedKeySpec(privateKeyBytes);
-        KeyFactory keyFactory = KeyFactory.getInstance("EC");
-        PrivateKey privatte = keyFactory.generatePrivate(keySpec);
+        BigInteger[] components = signer.generateSignature(result);
+
+        ECKey.ECDSASignature ecdsaSig = new ECKey.ECDSASignature(components[0], components[1]).toCanonicalised();
+
+        ByteArrayOutputStream baos = new ByteArrayOutputStream(72);
+        try {
+            DERSequenceGenerator der = new DERSequenceGenerator(baos);
+            der.addObject(new ASN1Integer(ecdsaSig.r));
+            der.addObject(new ASN1Integer(ecdsaSig.s));
+            der.close();
+            byte[] sig = baos.toByteArray();
+
+            String signuture = Hex.toHexString(sig);
+            System.out.println(signuture);
+        } catch (IOException e) {
+            // TODO: log
+        }
+
     }
 }
