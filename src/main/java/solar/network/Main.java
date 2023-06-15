@@ -5,28 +5,28 @@ import org.bitcoinj.core.Sha256Hash;
 import org.bitcoinj.core.Utils;
 import org.bouncycastle.asn1.ASN1Encoding;
 import org.bouncycastle.asn1.x9.X9ECParameters;
-import org.bouncycastle.crypto.digests.SHA256Digest;
 import org.bouncycastle.crypto.ec.CustomNamedCurves;
 import org.bouncycastle.crypto.params.ECDomainParameters;
 import org.bouncycastle.crypto.params.ECPrivateKeyParameters;
 import org.bouncycastle.crypto.params.ECPublicKeyParameters;
-import org.bouncycastle.crypto.signers.ECDSASigner;
-import org.bouncycastle.crypto.signers.HMacDSAKCalculator;
 import org.bouncycastle.crypto.util.SubjectPublicKeyInfoFactory;
 import org.bouncycastle.math.ec.ECPoint;
 import org.bouncycastle.math.ec.FixedPointCombMultiplier;
 import org.bouncycastle.util.encoders.Hex;
+import solar.network.Schnorr.KeyUtil;
+import solar.network.Schnorr.Schnorr;
 import solar.network.bean.*;
 import solar.network.enums.TransactionHeaderType;
 import solar.network.utils.HexUtil;
 import solar.network.utils.KeyUtils;
 import solar.network.utils.Point;
 
-import java.io.IOException;
 import java.math.BigInteger;
+import java.security.SecureRandom;
 import java.util.Arrays;
 
 import static org.bitcoinj.core.Base58.encode;
+
 
 public class Main {
 
@@ -36,21 +36,23 @@ public class Main {
     static final BigInteger HALF_CURVE_ORDER = CURVE_PARAMS.getN().shiftRight(1);
 
     public static void main(String[] args) throws Exception {
-        ECDSASigner signer;
-        signer = new ECDSASigner(new HMacDSAKCalculator(new SHA256Digest()));
         String privateKey = "4f255c0ac45ee549c207fd0b34ad4332d1d612e143c2154c5a811a5bbca017a1";
-        byte[] privateKeyBytes = Hex.decode(privateKey);
-        ECPrivateKeyParameters privKey = new ECPrivateKeyParameters(new BigInteger(1, privateKeyBytes), CURVE);
-        signer.init(true, privKey);
+        byte[] priKeyBytes = Hex.decode(privateKey);
+        ECPrivateKeyParameters privKeys = new ECPrivateKeyParameters(new BigInteger(1, priKeyBytes), CURVE);
+        //signer.init(true, privKey);
+
+        byte[] privateKeyBytes = privKeys.getD().toByteArray();
+
 
         ECPoint q = new FixedPointCombMultiplier().multiply(CURVE.getG(), new BigInteger(1, privateKeyBytes));
         ECPublicKeyParameters p = new ECPublicKeyParameters(q, CURVE);
-        byte[] pubBytes;
-        try {
-            pubBytes = SubjectPublicKeyInfoFactory.createSubjectPublicKeyInfo(p).getEncoded(ASN1Encoding.DER);
-        } catch (IOException io) {
-            throw new RuntimeException(io);
-        }
+
+        byte[] privateKeyWeekBytes = KeyUtil.getTweakedPrivKey(privateKeyBytes);
+
+        byte[] publicWeekBytes =  KeyUtil.getTweakedPubKey(privateKeyBytes);
+
+        byte[] pubBytes = SubjectPublicKeyInfoFactory.createSubjectPublicKeyInfo(p).getEncoded(ASN1Encoding.DER);
+        //byte[] pubBytes = KeyUtil.getTweakedPubKey(privateKeyBytes);
         System.out.println("publicKey:"+Hex.toHexString(pubBytes));
 
         byte version = (byte) 30;;
@@ -78,7 +80,6 @@ public class Main {
         Transfers transfers = new Transfers();
         transfers.setTransfers(Lists.newArrayList(transferAsset));
         transferTransaction.setAsset(transfers);
-        //transferTransaction.setAmount(new BigInteger("110000000"));
         transferTransaction.setSenderId(sender);
         transferTransaction.setNonce(BigInteger.ONE);
         //testnet
@@ -95,20 +96,27 @@ public class Main {
         transferTransaction.setSerialised(serilizeBytes);
         byte[] result = Sha256Hash.hash(serilizeBytes);
 
-        byte[] sig = sign(result,privateKeyBytes);
+
+
+
+        byte[] sig = Schnorr.sign(result,privateKeyWeekBytes,new SecureRandom().generateSeed(32));
+        //byte[] sig = Schnorr.sign(result,privateKeyBytes,new SecureRandom().generateSeed(32));
 
         String signure = Hex.toHexString(sig);
 
         transferTransaction.setSignature(signure);
         serialiseOptions.setExcludeSignature(true);
-        String id = Hex.toHexString(Sha256Hash.hash(Serialiser.getBytes(transferTransaction,serialiseOptions)));
-        transferTransaction.setId(id);
+        //String id = Hex.toHexString(Sha256Hash.hash(Serialiser.getBytes(transferTransaction,serialiseOptions)));
+        //transferTransaction.setId(id);
 
-        boolean verify = verify(result,KeyUtils.normalizePublicKey(pubBytes),sig);
-        System.out.println(verify);
+
+//        boolean verify = Schnorr.verify(result,publicWeekBytes,sig);
+//        System.out.println(verify);
 
         Transactions transactions = new Transactions();
-        transactions.setId(transferTransaction.getId());
+
+        byte[] id = Serialiser.getBytes(transferTransaction,serialiseOptions);
+        transactions.setId(Hex.toHexString(Sha256Hash.hash(id)));
         transactions.setAsset(transfers);
         transactions.setNonce(transferTransaction.getNonce());
         transactions.setSenderPublicKey(transferTransaction.getSenderPublicKey());

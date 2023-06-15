@@ -35,7 +35,15 @@ public class Serialiser {
 
         //transaction.setSerialised(buff.array());
 
-        return buff.array();
+        //return buff.array();
+        int remaining = buff.remaining();
+        buff.mark();
+        int position = buff.position();
+        byte[] bytesResult = new byte[position];
+        for(int i=0;i< position;i++){
+            bytesResult[i] = buff.get(i);
+        }
+        return bytesResult;
     }
 
     private static ByteBuffer serialiseCommon(Transaction transaction, ByteBuffer buff) {
