@@ -1,6 +1,7 @@
 package solar.network.bean;
 
 import org.bitcoinj.core.Base58;
+import org.bouncycastle.util.encoders.Hex;
 
 import java.util.HashMap;
 import java.util.Map;

@@ -2,6 +2,7 @@ package solar.network.bean;
 
 
 import lombok.Data;
+import org.bouncycastle.util.encoders.Hex;
 import solar.network.Schnorr.Util;
 import solar.network.enums.TransactionTypeGroup;
 import solar.network.constants.TransactionType;

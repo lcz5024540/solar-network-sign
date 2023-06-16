@@ -108,7 +108,6 @@ public class Main {
         serialiseOptions.setExcludeSignature(false);
 
 
-
         boolean verify = Schnorr.verify(result,publicWeekBytes,sig);
         System.out.println(verify);
 
@@ -126,7 +125,7 @@ public class Main {
         transactions.setTypeGroup(1);
         transactions.setSignature(transferTransaction.getSignature());
 
-        System.out.println(signure);
+        System.out.println(transactions);
 
     }
 
