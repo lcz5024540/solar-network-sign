@@ -1,5 +1,11 @@
 package solar.network.Schnorr;
 
+import org.bouncycastle.asn1.x9.X9ECParameters;
+import org.bouncycastle.crypto.ec.CustomNamedCurves;
+import org.bouncycastle.crypto.params.ECDomainParameters;
+import org.bouncycastle.crypto.params.ECPrivateKeyParameters;
+import org.bouncycastle.util.encoders.Hex;
+
 import java.math.BigInteger;
 import java.util.Arrays;
 
@@ -85,6 +91,34 @@ public class Schnorr    {
         }else{
             return true;
         }
+    }
+
+
+    public static void main(String[] args) throws Exception {
+
+        final X9ECParameters CURVE_PARAMS = CustomNamedCurves.getByName("secp256k1");
+        final ECDomainParameters CURVE = new ECDomainParameters(
+                CURVE_PARAMS.getCurve(), CURVE_PARAMS.getG(), CURVE_PARAMS.getN(), CURVE_PARAMS.getH());
+        final BigInteger HALF_CURVE_ORDER = CURVE_PARAMS.getN().shiftRight(1);
+        String privateKey = "C90FDAA22168C234C4C6628B80DC1CD129024E088A67CC74020BBEA63B14E5C9";
+        String publicKey = "DD308AFEC5777E13121FA72B9CC1B7CC0139715309B086C960E18FD969774EB8";
+
+        String aux_rand = "C87AA53824B4D7AE2EB035A2B5BBBCCC080E76CDC6D1692C4B0B62D798E6D906";
+
+        String message = "7E2D58D8B3BCDF1ABADEC7829054F90DDA9805AAB56C77333024B9D0A508B75C";
+
+        String sinature = "5831AAEED7B44BB74E5EAB94BA9D4294C49BCF2A60728D8B4C200F50DD313C1BAB745879A5AD954A72C45A91C3A51D3C7ADEA98D82F8481E0E1E03674A6F3FB7";
+
+        byte[] result = Schnorr.sign(Hex.decode(message),Hex.decode(privateKey),Hex.decode(aux_rand));
+        //byte[] result = Schnorr.sign(Hex.decode(message),priKeyBytes,Hex.decode(aux_rand));
+
+        boolean verify = Schnorr.verify(Hex.decode(message),Hex.decode(publicKey),Hex.decode(sinature));
+        if(verify){
+            System.out.println("true");
+        }else{
+            System.out.println("false");
+        }
+
     }
 
 }
