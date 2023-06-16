@@ -111,7 +111,11 @@ public class Schnorr    {
 
         byte[] result = Schnorr.sign(Hex.decode(message),Hex.decode(privateKey),Hex.decode(aux_rand));
         //byte[] result = Schnorr.sign(Hex.decode(message),priKeyBytes,Hex.decode(aux_rand));
-
+        if(Hex.toHexString(result).equalsIgnoreCase(sinature)){
+            System.out.println("true");
+        }else{
+            System.out.println("false");
+        }
         boolean verify = Schnorr.verify(Hex.decode(message),Hex.decode(publicKey),Hex.decode(sinature));
         if(verify){
             System.out.println("true");
