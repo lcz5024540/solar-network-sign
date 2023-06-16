@@ -12,12 +12,11 @@ public class Address {
         ConfigManager configManager = new ConfigManager();
         Integer networkVersion = Integer.valueOf(((Network)configManager.get("network")).getPubKeyHash().toString());
         Map<String, Object> result = new HashMap<>();
-        result.put("addressBuffer", buffer);
+        result.put("addressBuffer", Hex.toHexString(buffer));
 
         if (buffer[0] != networkVersion.byteValue()) {
             result.put("addressError", String.format("Expected address network byte %d, but got %d.", networkVersion, buffer[0]));
         }
-
         return result;
     }
 }
