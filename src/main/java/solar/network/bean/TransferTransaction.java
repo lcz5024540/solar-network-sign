@@ -2,9 +2,11 @@ package solar.network.bean;
 
 
 import lombok.Data;
+import solar.network.Schnorr.Util;
 import solar.network.enums.TransactionTypeGroup;
 import solar.network.constants.TransactionType;
 
+import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.nio.ByteBuffer;
 import java.util.List;
@@ -35,18 +37,24 @@ public class TransferTransaction extends Transaction {
         if ( this.getAsset() != null  &&  this.getAsset().getTransfers().size()!=0 ) {
             ByteBuffer buff = ByteBuffer.allocate(2 + this.getAsset().getTransfers().size() * 29);
 
-            buff.putInt(this.getAsset().getTransfers().size());
+            byte[] lengthBytes = new byte[2];
+            int length = this.getAsset().getTransfers().size();
+            lengthBytes[0] = (byte)length;
+            buff.put(lengthBytes);
+            //buff.putInt(this.getAsset().getTransfers().size());
 
             for(TransferAsset transferAsset : this.getAsset().getTransfers()){
-                BigInteger amount = new BigInteger(transferAsset.getAmount());
-                buff.put(amount.toByteArray(),buff.arrayOffset(),amount.toByteArray().length);
+                BigInteger amount = new BigDecimal(transferAsset.getAmount()).toBigInteger();
+                buff.put(Util.bigInteger2Bytes(amount));
+                //BigInteger amount = new BigDecimal(transferAsset.getAmount()).toBigInteger();
+                //buff.put(amount.toByteArray(),buff.arrayOffset(),amount.toByteArray().length);
 
                 Map<String,Object> addressBufferResult = Address.toBuffer(transferAsset.getRecipientId());
                 if (addressBufferResult.get("addressError") != null) {
                     throw new RuntimeException(addressBufferResult.get("addressError").toString());
                 }
 
-                buff.put(addressBufferResult.get("addressBuffer").toString().getBytes());
+                buff.put(Hex.decode(addressBufferResult.get("addressBuffer").toString()));
 
             }
 

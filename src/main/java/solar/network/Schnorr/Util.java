@@ -1,6 +1,8 @@
 package solar.network.Schnorr;
 
 import java.math.BigInteger;
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 
 public class Util {
 
@@ -38,6 +40,13 @@ public class Util {
         }
 
         return ret;
+    }
+
+    public static byte[] bigInteger2Bytes(BigInteger a){
+        ByteBuffer buffer = ByteBuffer.allocate(8);
+        buffer.order(ByteOrder.LITTLE_ENDIAN);
+        buffer.putLong(a.longValue());
+        return buffer.array();
     }
 
 }

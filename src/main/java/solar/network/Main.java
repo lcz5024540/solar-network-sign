@@ -52,11 +52,11 @@ public class Main {
         byte[] publicWeekBytes =  KeyUtil.getTweakedPubKey(privateKeyBytes);
 
         byte[] pubBytes = SubjectPublicKeyInfoFactory.createSubjectPublicKeyInfo(p).getEncoded(ASN1Encoding.DER);
-        //byte[] pubBytes = KeyUtil.getTweakedPubKey(privateKeyBytes);
+        pubBytes = KeyUtils.normalizePublicKey(pubBytes);
         System.out.println("publicKey:"+Hex.toHexString(pubBytes));
 
         byte version = (byte) 30;;
-        //byte version = (byte) 30;
+        //byte version = (byte) 63;
 
         byte[] payload = Utils.sha256hash160(pubBytes);
 
@@ -69,7 +69,7 @@ public class Main {
         String sender = encode(addressBytes);
         System.out.println(sender);
         TransferTransaction transferTransaction = new TransferTransaction();
-        transferTransaction.setSenderPublicKey(Hex.toHexString(KeyUtils.normalizePublicKey(pubBytes)));
+        transferTransaction.setSenderPublicKey(Hex.toHexString(pubBytes));
         transferTransaction.setHeaderType(TransactionHeaderType.Standard.getValue());
         transferTransaction.setType(6);
         transferTransaction.setTypeGroup(1);
@@ -82,6 +82,7 @@ public class Main {
         transferTransaction.setAsset(transfers);
         transferTransaction.setSenderId(sender);
         transferTransaction.setNonce(BigInteger.ONE);
+        //transferTransaction.setNonce(new BigInteger("123178231"));
         //testnet
         transferTransaction.setNetwork(30);
         //mainnet
@@ -89,6 +90,7 @@ public class Main {
         transferTransaction.setVersion(3);
         transferTransaction.setMemo("Poloniex Wallet");
         transferTransaction.setFee(new BigInteger("4000000"));
+
         SerialiseOptions serialiseOptions = new SerialiseOptions();
         serialiseOptions.setDisableVersionCheck(true);
 
@@ -96,22 +98,19 @@ public class Main {
         transferTransaction.setSerialised(serilizeBytes);
         byte[] result = Sha256Hash.hash(serilizeBytes);
 
-
-
+        transferTransaction.setId(Hex.toHexString(result));
 
         byte[] sig = Schnorr.sign(result,privateKeyWeekBytes,new SecureRandom().generateSeed(32));
-        //byte[] sig = Schnorr.sign(result,privateKeyBytes,new SecureRandom().generateSeed(32));
 
         String signure = Hex.toHexString(sig);
 
         transferTransaction.setSignature(signure);
-        serialiseOptions.setExcludeSignature(true);
-        //String id = Hex.toHexString(Sha256Hash.hash(Serialiser.getBytes(transferTransaction,serialiseOptions)));
-        //transferTransaction.setId(id);
+        serialiseOptions.setExcludeSignature(false);
 
 
-//        boolean verify = Schnorr.verify(result,publicWeekBytes,sig);
-//        System.out.println(verify);
+
+        boolean verify = Schnorr.verify(result,publicWeekBytes,sig);
+        System.out.println(verify);
 
         Transactions transactions = new Transactions();
 

@@ -1,5 +1,6 @@
 package solar.network.bean;
 
+import solar.network.Schnorr.Util;
 import solar.network.enums.TransactionHeaderType;
 import solar.network.enums.TransactionTypeGroup;
 import org.bouncycastle.util.encoders.Hex;
@@ -33,10 +34,6 @@ public class Serialiser {
 
         serialiseSignatures(transaction, buff, options);
 
-        //transaction.setSerialised(buff.array());
-
-        //return buff.array();
-        int remaining = buff.remaining();
         buff.mark();
         int position = buff.position();
         byte[] bytesResult = new byte[position];
@@ -58,23 +55,29 @@ public class Serialiser {
         ConfigManager configManager = new ConfigManager();
         buff.put((byte) (transaction.getNetwork() != null ? transaction.getNetwork() : Integer.parseInt(((Network)configManager.get("network")).getPubKeyHash().toString())));
 
-        buff.putInt(transaction.getTypeGroup());
-        buff.putShort(Short.valueOf(transaction.getType()+""));
-        buff.put(transaction.getNonce().toByteArray(),buff.arrayOffset(),transaction.getNonce().toByteArray().length);
-        //buff.put(transaction.getNonce().toByteArray());
+        byte[] typeGroupBytes = new byte[4];
+        typeGroupBytes[0] = transaction.getTypeGroup().byteValue();
+        buff.put(typeGroupBytes);
+        byte[] typeBytes = new byte[2];
+        typeBytes[0] = transaction.getType().byteValue();
+        buff.put(typeBytes);
+        byte[] nonceBytes = new byte[8];
+        byte[] nonce = transaction.getNonce().toByteArray();
+        for(int i=0;i<nonce.length;i++){
+            nonceBytes[i] = nonce[i];
+        }
+        buff.put(nonceBytes);
 
-        buff.put(transaction.getSenderPublicKey().getBytes());
+        buff.put(Hex.decode(transaction.getSenderPublicKey()));
         if (transaction.getHeaderType() == TransactionHeaderType.Extended.getValue()) {
             Map<String,Object> addressBufferResult = Address.toBuffer(transaction.getSenderId());
             if (addressBufferResult.get("addressError") != null) {
                 throw new RuntimeException(addressBufferResult.get("addressError").toString());
             }
 
-            buff.put(addressBufferResult.get("addressBuffer").toString().getBytes());
+            buff.put(Hex.decode(addressBufferResult.get("addressBuffer").toString()));
         }
-
-        //buff.putLong(transaction.getFee().longValue());
-        buff.put(transaction.getFee().toByteArray(),buff.arrayOffset(),transaction.getFee().toByteArray().length);
+        buff.put(Util.bigInteger2Bytes(transaction.getFee()));
         return buff;
     }
 
